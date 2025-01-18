@@ -1,0 +1,19 @@
+TRADING_PAIRS = [
+    'BTCUSDT',
+    'XRPUSDT', 
+    'ETHUSDT',
+    'SOLUSDT',
+    'USDCUSDT',
+    'DOGEUSDT',
+    'SUIUSDT',
+    'ADAUSDT',
+    'LTCUSDT',
+    'PEPEUSDT',
+    'XLMUSDT',
+    'LINKUSDT',
+    'ALGOUSDT',
+    'SHIBUSDT',
+    'AVAXUSDT',
+    'FTMUSDT',
+    'NEARUSDT'
+]
