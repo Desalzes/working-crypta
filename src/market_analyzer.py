@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from typing import Dict, List, Optional
 import logging
-from data_processor import DataProcessor
+from .data_processor import DataProcessor
 
 class MarketAnalyzer:
     def __init__(self):

@@ -1,24 +1,19 @@
 import argparse
 from typing import Optional
 import logging
-from .research_manager import ResearchManager
+from . import resrch_manage
 from .data_processor import DataProcessor
 from .llm_analyzer import LLMAnalyzer
 from .automated_trader import AutomatedTrader
 
 class CLI:
     def __init__(self):
-        self.research_manager = ResearchManager()
+        logging.info("Initializing CLI...")
+        self.research_manager = resrch_manage.ResearchManager()
+        logging.info("ResearchManager initialized.")
         self.data_processor = DataProcessor()
         self.llm_analyzer = LLMAnalyzer()
         self.automated_trader = AutomatedTrader()
-
-    async def clean_historical_data(self):
-        print("\nCleaning historical data...")
-        data_dir = 'C:/Users/desal/anthropicFun/research/data/historical'
-        results = self.data_processor.remove_duplicates_and_save(data_dir)
-        for filename, duplicates_removed in results.items():
-            print(f"Removed {duplicates_removed} duplicates from {filename}")
 
     async def run(self, option: Optional[int] = None):
         if option is None:
@@ -31,8 +26,9 @@ class CLI:
                 print("\nStarting ML Analysis...")
                 await self.research_manager.run_ml_analysis()
             elif option == 3:
-                print("\nStarting Data Download...")
+                logging.info("Starting Data Download...")
                 await self.research_manager.download_market_data()
+                logging.info("Data Download completed.")
             elif option == 4:
                 print("\nStarting LLM Market Review...")
                 await self.research_manager.llm_market_review()
@@ -55,7 +51,7 @@ class CLI:
         print("4. LLM Market Review")
         print("5. Start Automated Trading")
         print("6. Exit")
-        
+
         while True:
             try:
                 choice = int(input("\nSelect an option (1-6): "))
