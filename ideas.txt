@@ -1,0 +1,7 @@
+
+
+ok so right now I'm pretty sure its going off the confidence of .6,
+it should be set up in a way that either the llm decides orrrr
+.7 in bear .55 or .6 in bull?
+
+also might be pulling too many data points for ml its slowed down alot

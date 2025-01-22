@@ -5,7 +5,7 @@ from .indicator_combinations import IndicatorCombinations
 from .indicator_optimizer import IndicatorOptimizer
 from .visualization import IndicatorVisualizer
 from .ml_trader import MLTrader
-from .resrch_manage import ResearchManager
+from .research_manager import ResearchManager
 
 __all__ = [
     'DataProcessor',

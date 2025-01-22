@@ -4,7 +4,6 @@ from src.cli import CLI
 import os
 import torch
 
-
 def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
