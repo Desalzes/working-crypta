@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class PortfolioManager:
-    def __init__(self, initial_balance: float = 10000.0):
+    def __init__(self, initial_balance: float = 87.0):
         self.balance = initial_balance
         self.positions: Dict[str, float] = {}
         self.trade_history: List[Dict] = []
@@ -29,12 +29,12 @@ class PortfolioManager:
             try:
                 with open(balance_path, 'r') as f:
                     balance_data = json.load(f)
-                    self.balance = balance_data.get('USD', 10000.00)
+                    self.balance = balance_data.get('USD', 87.00)
                     self.crypto_holdings = balance_data.get('crypto_holdings', {})
                     self.trade_history = balance_data.get('trade_history', [])
             except Exception as e:
                 logger.error(f"Error loading balance: {e}")
-                self.balance = 10000.00
+                self.balance = 87.00
                 self.crypto_holdings = {}
                 self.trade_history = []
         else:

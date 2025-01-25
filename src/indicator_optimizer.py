@@ -71,7 +71,7 @@ class IndicatorOptimizer:
         
     def _calculate_profit(self, df: pd.DataFrame, signals: np.ndarray) -> float:
         position = 0
-        balance = 10000
+        balance = 90
         prices = df['close'].values
         
         for i in range(1, len(signals)):
@@ -84,7 +84,7 @@ class IndicatorOptimizer:
         if position > 0:
             balance = position * prices[-1]
             
-        return (balance - 10000) / 10000 * 100
+        return (balance - 90) / 90 * 100
         
     # Indicator calculation methods
     def _rsi_signal(self, df: pd.DataFrame, **params) -> np.ndarray:

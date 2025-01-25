@@ -206,3 +206,21 @@ class Indicators:
             'bb_width': float(result['bb_upper'].iloc[-1] - result['bb_lower'].iloc[-1]),
             'kc_width': float(result['kc_upper'].iloc[-1] - result['kc_lower'].iloc[-1])
         }
+
+    def calculate_all_timeframes(self, all_timeframes_data: Dict[str, pd.DataFrame]) -> Dict[str, Dict]:
+        """
+        Calculate indicators for each timeframe.
+
+        Args:
+            all_timeframes_data (Dict[str, pd.DataFrame]): OHLCV data per timeframe.
+
+        Returns:
+            Dict[str, Dict]: Indicators per timeframe.
+        """
+        indicators_per_timeframe = {}
+        for tf, df in all_timeframes_data.items():
+            if df.empty:
+                logger.warning(f"No data for timeframe {tf}")
+                continue
+            indicators_per_timeframe[tf] = self.calculate_all(df)
+        return indicators_per_timeframe

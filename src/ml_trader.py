@@ -3,13 +3,13 @@ import pickle
 import logging
 from pathlib import Path
 from typing import Dict, Tuple, Optional
-
+import ta
 import torch
 import torch.nn as nn
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
-import ta
+
 
 # Set thread numbers
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class Chomp1d(nn.Module):
-    """Remove extra padding from the right side for causal convolution."""
+    """Remove extra padding from the right side for causal convolution"""
 
     def __init__(self, chomp_size: int):
         super().__init__()
@@ -30,17 +30,29 @@ class Chomp1d(nn.Module):
 
 
 class TemporalBlock(nn.Module):
-    """TCN block with dilated causal convolution and residual connection."""
+    """TCN block with dilated causal convolution and residual connection"""
 
     def __init__(
-        self, in_channels, out_channels, kernel_size, stride, dilation, padding, dropout=0.2
+        self,
+        in_channels,
+        out_channels,
+        kernel_size,
+        stride,
+        dilation,
+        padding,
+        dropout=0.2,
     ):
         super().__init__()
 
         # First dilated convolution
         self.conv1 = nn.utils.parametrizations.weight_norm(
             nn.Conv1d(
-                in_channels, out_channels, kernel_size, stride=stride, padding=padding, dilation=dilation
+                in_channels,
+                out_channels,
+                kernel_size,
+                stride=stride,
+                padding=padding,
+                dilation=dilation,
             )
         )
         self.chomp1 = Chomp1d(padding)
@@ -50,7 +62,12 @@ class TemporalBlock(nn.Module):
         # Second dilated convolution
         self.conv2 = nn.utils.parametrizations.weight_norm(
             nn.Conv1d(
-                out_channels, out_channels, kernel_size, stride=stride, padding=padding, dilation=dilation
+                out_channels,
+                out_channels,
+                kernel_size,
+                stride=stride,
+                padding=padding,
+                dilation=dilation,
             )
         )
         self.chomp2 = Chomp1d(padding)
@@ -58,7 +75,11 @@ class TemporalBlock(nn.Module):
         self.dropout2 = nn.Dropout(dropout)
 
         # Residual connection if needed
-        self.downsample = nn.Conv1d(in_channels, out_channels, 1) if in_channels != out_channels else None
+        self.downsample = (
+            nn.Conv1d(in_channels, out_channels, 1)
+            if in_channels != out_channels
+            else None
+        )
         self.relu = nn.ReLU()
 
     def forward(self, x):
@@ -77,9 +98,11 @@ class TemporalBlock(nn.Module):
 
 
 class TemporalConvNet(nn.Module):
-    """Multi-scale TCN with skip connections."""
+    """Multi-scale TCN with skip connections"""
 
-    def __init__(self, num_inputs, num_channels, kernel_size=2, dropout=0.2):
+    def __init__(
+        self, num_inputs, num_channels, kernel_size=2, dropout=0.2
+    ):
         super().__init__()
         layers = []
         num_levels = len(num_channels)
@@ -109,7 +132,7 @@ class TemporalConvNet(nn.Module):
 
 
 class MultiTimeframeTCN(nn.Module):
-    """Multi-timeframe TCN for market data processing."""
+    """Multi-timeframe TCN for market data processing"""
 
     def __init__(
         self,
@@ -121,8 +144,11 @@ class MultiTimeframeTCN(nn.Module):
         num_classes: int = 3,
     ):
         super().__init__()
-
-        channel_list = [hidden_size // 2, hidden_size, hidden_size] if num_levels >= 2 else [hidden_size]
+        channel_list = (
+            [hidden_size // 2, hidden_size, hidden_size]
+            if num_levels >= 2
+            else [hidden_size]
+        )
 
         self.tcn = TemporalConvNet(
             num_inputs=input_size,
@@ -138,10 +164,12 @@ class MultiTimeframeTCN(nn.Module):
     def forward(self, x):
         # x: [batch, n_timeframes, seq_len, features]
         b, n_timeframes, seq_len, features = x.shape
-        x = x.view(-1, seq_len, features).permute(0, 2, 1)
-        out = self.tcn(x)
-        out = out[:, :, -1]  # Last timestep
-        out = out.view(b, n_timeframes, -1)
+        x = (
+            x.view(-1, seq_len, features).permute(0, 2, 1)
+        )  # (batch*n_timeframes, features, seq_len)
+        out = self.tcn(x)  # (batch*n_timeframes, hidden_size, seq_len_out)
+        out = out[:, :, -1]  # Last timestep (batch*n_timeframes, hidden_size)
+        out = out.view(b, n_timeframes, -1)  # (batch, n_timeframes, hidden_size)
         out = torch.mean(out, dim=1)  # Average across timeframes
         out = self.fc1(out)
         out = self.relu(out)
@@ -153,13 +181,13 @@ class MultiTimeframeTCN(nn.Module):
 class MLTrader:
     def __init__(
         self,
-        sequence_length: int = 14,
+        sequence_length: int = 12,
         hidden_size: int = 64,
         num_levels: int = 3,
         train_ratio: float = 0.8,
         val_ratio: float = 0.1,
     ):
-        """Initialize MLTrader with TCN model for multi-timeframe trading."""
+        """Initialize MLTrader with TCN model for multi-timeframe trading"""
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device: {self.device}")
         if torch.cuda.is_available():
@@ -169,7 +197,9 @@ class MLTrader:
         self.train_ratio = train_ratio
         self.val_ratio = val_ratio
         self.scalers: Dict[str, StandardScaler] = {}
-        self.n_features = 10  # OHLCV + RSI, MACD, MACD Signal, VWAP, ATR
+        self.n_features = (
+            10  # OHLCV + RSI, MACD, MACD Signal, VWAP, ATR
+        )
 
         self.model = MultiTimeframeTCN(
             input_size=self.n_features,
@@ -184,35 +214,44 @@ class MLTrader:
         self.criterion = nn.CrossEntropyLoss()
 
         if torch.cuda.is_available():
-            from torch.amp import GradScaler
-
-            self.scaler = GradScaler("cuda")
+            self.scaler = torch.cuda.amp.GradScaler()
         else:
             self.scaler = None
 
-        self.data_dir = os.path.join(Path(__file__).parent.parent, "data", "historical")
+        self.data_dir = os.path.join(
+            Path(__file__).parent.parent, "data", "historical"
+        )
         self.model_dir = os.path.join(Path(__file__).parent.parent, "data", "models")
         os.makedirs(self.model_dir, exist_ok=True)
 
     def add_technical_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Add technical indicators and fill NaN values."""
+        """Add technical indicators required for the model"""
         df = df.copy()
+
+        # Remove existing indicators if present
         for col in ["rsi", "macd", "macd_signal", "vwap", "atr"]:
             if col in df.columns:
                 df.drop(columns=[col], inplace=True)
 
+        # Prevent divide by zero in volume calculations
         df["volume"] = df["volume"].replace(0, 1e-8)
 
-        # Calculate indicators
+        # Calculate indicators using ta library
         rsi = ta.momentum.RSIIndicator(df["close"], window=14)
         df["rsi"] = rsi.rsi()
 
-        macd = ta.trend.MACD(df["close"], window_fast=12, window_slow=26, window_sign=9)
+        macd = ta.trend.MACD(
+            df["close"], window_fast=12, window_slow=26, window_sign=9
+        )
         df["macd"] = macd.macd()
         df["macd_signal"] = macd.macd_signal()
 
         vwap = ta.volume.VolumeWeightedAveragePrice(
-            high=df["high"], low=df["low"], close=df["close"], volume=df["volume"], window=14
+            high=df["high"],
+            low=df["low"],
+            close=df["close"],
+            volume=df["volume"],
+            window=14,
         )
         df["vwap"] = vwap.volume_weighted_average_price()
 
@@ -221,12 +260,13 @@ class MLTrader:
         )
         df["atr"] = atr.average_true_range()
 
+        # Fill NaN values
         df.ffill(inplace=True)
         df.bfill(inplace=True)
         return df
 
     def get_data_files(self, pair: str) -> Dict[str, str]:
-        """Get CSV file paths for all timeframes."""
+        """Get CSV files for all timeframes of a trading pair"""
         timeframes = {
             "1m": f"{pair}_1m_data.csv",
             "5m": f"{pair}_5m_data.csv",
@@ -239,31 +279,84 @@ class MLTrader:
         files = {}
 
         for tf, fname in timeframes.items():
-            fp = os.path.join(pair_dir, fname)
-            if os.path.exists(fp):
-                files[tf] = fp
+            filepath = os.path.join(pair_dir, fname)
+            if os.path.exists(filepath):
+                files[tf] = filepath
+            else:
+                logger.warning(f"No file found for timeframe {tf} -> {filepath}")
         return files
 
+    def load_model(self, pair: str, model_filename: str) -> bool:
+        """
+        Load a pre-trained model for a specific trading pair.
+
+        Args:
+            pair (str): Trading pair identifier (e.g., "BTCUSD").
+            model_filename (str): Filename of the pre-trained model.
+
+        Returns:
+            bool: True if loading was successful, False otherwise.
+        """
+        try:
+            model_path = os.path.join(self.model_dir, model_filename)
+            if not os.path.exists(model_path):
+                logger.error(f"Model file does not exist: {model_path}")
+                return False
+
+            # Load the model state
+            self.model.load_state_dict(torch.load(model_path, map_location=self.device))
+            self.model.eval()
+            logger.info(f"Loaded model for {pair} from {model_path}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error loading model for {pair}: {e}", exc_info=True)
+            return False
+
+    def save_model(self, pair: str, suffix: str = ""):
+        """
+        Save the current state of the model.
+
+        Args:
+            pair (str): Trading pair identifier (e.g., "BTCUSD").
+            suffix (str, optional): Suffix to append to the model filename. Defaults to "".
+        """
+        try:
+            timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
+            model_filename = f"{pair}_{timestamp}{'_' + suffix if suffix else ''}.pt"
+            model_path = os.path.join(self.model_dir, model_filename)
+            torch.save(self.model.state_dict(), model_path)
+            logger.info(f"Saved model for {pair} at {model_path}")
+        except Exception as e:
+            logger.error(f"Error saving model for {pair}: {e}", exc_info=True)
     def load_data(self, pair: str) -> Dict[str, pd.DataFrame]:
-        """Load and preprocess data for all timeframes."""
+        """Load and preprocess data for all timeframes"""
         dataframes = {}
         files = self.get_data_files(pair)
 
-        for tf, fp in files.items():
+        if not files:
+            logger.error(f"No data files found for {pair}.")
+            return dataframes
+
+        for tf, filepath in files.items():
             try:
-                df = pd.read_csv(fp)
+                df = pd.read_csv(filepath)
                 df["timestamp"] = pd.to_datetime(df["timestamp"])
                 df.set_index("timestamp", inplace=True)
                 df = self.add_technical_features(df)
                 dataframes[tf] = df
-                logger.info(f"Loaded {fp} with {len(df)} rows after indicators")
+                logger.info(
+                    f"Loaded {filepath} with {len(df)} rows after indicators"
+                )
             except Exception as e:
-                logger.error(f"Error loading {fp}: {e}")
+                logger.error(f"Error loading {filepath}: {e}")
 
         return dataframes
 
-    def split_dataframe(self, df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-        """Split data into train, validation, and test sets."""
+    def split_dataframe(
+        self, df: pd.DataFrame
+    ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+        """Split data into train, validation, and test sets"""
         n = len(df)
         if n < 2:
             return df, pd.DataFrame(), pd.DataFrame()
@@ -278,9 +371,12 @@ class MLTrader:
         return train_df, val_df, test_df
 
     def prepare_data(
-        self, dataframes: Dict[str, pd.DataFrame], phase: str = "train", max_samples: int = 10000
+            self,
+            dataframes: Dict[str, pd.DataFrame],
+            phase: str = "train",
+            max_samples: int = 10000,
     ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
-        """Prepare multi-timeframe data for training/prediction."""
+        """Prepare multi-timeframe data for training/prediction"""
         if not dataframes or "1m" not in dataframes:
             logger.error("Missing dataframes or 1m data required")
             return None, None
@@ -292,19 +388,29 @@ class MLTrader:
             if phase == "train":
                 phase_dfs[tf] = train_df
             elif phase == "val":
-                # Use more data for validation by including test data
-                phase_dfs[tf] = pd.concat([val_df, test_df.iloc[: len(val_df)]])
-            else:
+                # Use more data for validation
+                phase_dfs[tf] = pd.concat([val_df, test_df.iloc[:len(val_df)]])
+            else:  # test
                 phase_dfs[tf] = test_df
 
+        # Find minimum usable length across timeframes
         min_len_across = min(len(df) for df in phase_dfs.values())
         usable_length = min(min_len_across, max_samples)
 
-        if usable_length < self.sequence_length:
-            logger.error(f"[{phase}] Insufficient data: {usable_length} samples")
+        # Check sequence length requirements
+        min_required = self.sequence_length + 3  # sequence + lookahead
+        if usable_length < min_required:
+            logger.error(
+                f"[{phase}] Insufficient data. Have {usable_length}, need {min_required}"
+            )
             return None, None
 
-        X_timeframes = []
+        # Validation size check
+        if phase == "val" and usable_length < self.sequence_length * 2:
+            logger.error(f"[{phase}] Validation set too small: {usable_length}")
+            return None, None
+
+        # Process 1m data for labels
         df_1m = phase_dfs.get("1m", pd.DataFrame())
         if df_1m.empty:
             logger.error(f"[{phase}] 1m data missing")
@@ -315,6 +421,7 @@ class MLTrader:
         future_returns = df_1m["close"].pct_change(3).shift(-3)
         threshold = future_returns.std() * 0.3
 
+        # Process features for each timeframe
         feature_columns = [
             "open",
             "high",
@@ -327,12 +434,14 @@ class MLTrader:
             "vwap",
             "atr",
         ]
+        X_timeframes = []
 
         for tf, df_slice in phase_dfs.items():
             if df_slice.empty:
                 logger.error(f"[{phase}] {tf} timeframe empty")
                 return None, None
 
+            # Prepare features
             df_slice = df_slice.iloc[-usable_length:].copy()
             features = df_slice[feature_columns].values
 
@@ -343,7 +452,7 @@ class MLTrader:
                 self.scalers[tf] = scaler
             else:
                 if tf not in self.scalers:
-                    logger.error(f"No scaler found for {tf}")
+                    logger.error(f"No scaler for {tf} in {phase}")
                     return None, None
                 scaled_data = self.scalers[tf].transform(features)
 
@@ -354,40 +463,49 @@ class MLTrader:
                 sequences.append(seq)
 
             if not sequences:
-                logger.warning(f"[{phase}] No sequences for {tf}")
+                logger.error(f"[{phase}] No sequences for {tf}")
                 return None, None
 
-            seq_tensor = torch.tensor(np.array(sequences), dtype=torch.float32)
+            seq_tensor = torch.tensor(
+                np.array(sequences), dtype=torch.float32
+            )
             X_timeframes.append(seq_tensor)
 
         # Align sequences across timeframes
         min_windows = min(x.size(0) for x in X_timeframes)
-        X_timeframes = [x[-min_windows:] for x in X_timeframes]
+        X_timeframes = [x[-min_windows :] for x in X_timeframes]
         X = torch.stack(X_timeframes, dim=1)
 
         # Create labels
         future_returns = future_returns.iloc[self.sequence_length - 1 :][-min_windows:]
+        if len(future_returns) < min_windows:
+            logger.error(f"[{phase}] Label/sample size mismatch")
+            return None, None
+
         y = torch.zeros(min_windows, dtype=torch.long)
         y[future_returns.values > threshold] = 1  # BUY
         y[future_returns.values < -threshold] = 2  # SELL
 
         return X, y
 
-    async def train(self, pair: Optional[str] = None, epochs: int = 30, batch_size: int = 64):
-        """Train the model on historical data."""
+    async def train(
+        self, pair: Optional[str] = None, epochs: int = 30, batch_size: int = 64
+    ):
+        """Train the model on historical data"""
         try:
             if pair:
                 all_pairs = [pair]
             else:
                 all_pairs = [
-                    d for d in os.listdir(self.data_dir)
+                    d
+                    for d in os.listdir(self.data_dir)
                     if os.path.isdir(os.path.join(self.data_dir, d))
                 ]
             all_pairs.sort()
 
             results = {}
             for current_pair in all_pairs:
-                print(f"\nTraining on Pair: {current_pair}")
+                print(f"\nTraining model for {current_pair}...")
                 print("Loading data...")
                 pair_data = self.load_data(current_pair)
                 if not pair_data:
@@ -397,22 +515,33 @@ class MLTrader:
                 print("Preparing training data...")
                 X_train, y_train = self.prepare_data(pair_data, phase="train")
                 if X_train is None or y_train is None:
-                    print(f"Could not prepare training data for {current_pair}, skipping.")
+                    print(
+                        f"Could not prepare training data for {current_pair}, skipping."
+                    )
                     continue
 
+                # Get validation data
                 X_val, y_val = self.prepare_data(pair_data, phase="val")
-                has_validation = (X_val is not None and y_val is not None)
+                has_validation = X_val is not None and y_val is not None
 
-                # Create data loaders with 12 workers
+                # Create data loaders
                 train_ds = torch.utils.data.TensorDataset(X_train, y_train)
                 train_loader = torch.utils.data.DataLoader(
-                    train_ds, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=10
+                    train_ds,
+                    batch_size=batch_size,
+                    shuffle=True,
+                    pin_memory=True,
+                    num_workers=0,
                 )
 
                 if has_validation:
                     val_ds = torch.utils.data.TensorDataset(X_val, y_val)
                     val_loader = torch.utils.data.DataLoader(
-                        val_ds, batch_size=batch_size, shuffle=False, pin_memory=True, num_workers=10
+                        val_ds,
+                        batch_size=batch_size,
+                        shuffle=False,
+                        pin_memory=True,
+                        num_workers=0,
                     )
                 else:
                     val_loader = None
@@ -435,13 +564,12 @@ class MLTrader:
                 total_params = sum(p.numel() for p in self.model.parameters())
                 print(f"Total Model Parameters: {total_params:,}")
 
-                # Training constants
+                # Training loop
                 epoch_logs = []
                 best_val_loss = float("inf")
                 patience = 15
                 patience_counter = 0
-                improvement_threshold = 0.005
-                minimum_epochs_before_saving = 5
+                min_epochs = 5
 
                 for ep in range(epochs):
                     self.model.train()
@@ -450,7 +578,8 @@ class MLTrader:
                     total = 0
                     batch_losses = []
 
-                    for batch_idx, (batch_x, batch_y) in enumerate(train_loader, 1):
+                    # Training phase
+                    for batch_x, batch_y in train_loader:
                         batch_x = batch_x.to(self.device, non_blocking=True)
                         batch_y = batch_y.to(self.device, non_blocking=True)
                         self.optimizer.zero_grad()
@@ -476,7 +605,7 @@ class MLTrader:
                             correct += predicted.eq(batch_y).sum().item()
 
                         except RuntimeError as e:
-                            print(f"Training error on batch {batch_idx}: {e}")
+                            print(f"Training error on batch: {e}")
                             torch.cuda.empty_cache()
                             continue
 
@@ -506,10 +635,9 @@ class MLTrader:
                         val_loss = val_total_loss / len(val_loader)
                         val_acc = 100.0 * val_correct / val_total
 
+                    # Print progress
                     val_loss_str = f"{val_loss:.4f}" if val_loss is not None else "N/A"
                     val_acc_str = f"{val_acc:.2f}" if val_acc is not None else "N/A"
-
-                    # Print progress
                     print(
                         f"Epoch {ep + 1}/{epochs} - "
                         f"Train Loss: {avg_train_loss:.4f}, "
@@ -518,16 +646,19 @@ class MLTrader:
                         f"Val Acc: {val_acc_str}% "
                         f"(Min/Max/Mean Batch Loss: {min(batch_losses):.4f}/{max(batch_losses):.4f}/{np.mean(batch_losses):.4f})"
                     )
-                    # Model saving logic
-                    if (ep + 1) >= minimum_epochs_before_saving:
-                        if val_loss is not None and val_loss < (best_val_loss - improvement_threshold):
+
+                    # Save best model if validation improves
+                    if ep + 1 >= min_epochs:
+                        if val_loss is not None and val_loss < best_val_loss:
                             best_val_loss = val_loss
                             patience_counter = 0
                             self.save_model(pair=current_pair, suffix="best")
                         else:
                             patience_counter += 1
                             if patience_counter >= patience:
-                                print(f"\nEarly stopping triggered after {ep + 1} epochs")
+                                print(
+                                    f"\nEarly stopping triggered after {ep + 1} epochs"
+                                )
                                 break
 
                     # Log epoch results
@@ -545,6 +676,7 @@ class MLTrader:
                 torch.cuda.empty_cache()
                 self.save_model(pair=current_pair)
 
+                # Store results
                 results[current_pair] = {
                     "training_history": epoch_logs,
                     "final_metrics": {
@@ -564,222 +696,14 @@ class MLTrader:
             traceback.print_exc()
             return None
 
-    def save_model(self, pair: Optional[str] = None, suffix: str = "") -> None:
-        """Save model state and scalers."""
-        timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
-        name_parts = [pair if pair else "combined_model", timestamp]
-        if suffix:
-            name_parts.append(suffix)
-        model_name = "_".join(name_parts)
-
-        model_path = os.path.join(self.model_dir, f"{model_name}.pt")
-        scalers_path = os.path.join(self.model_dir, f"{model_name}_scalers.pkl")
-
-        torch.save(
-            {
-                "model_state": self.model.state_dict(),
-                "optimizer_state": self.optimizer.state_dict(),
-                "sequence_length": self.sequence_length,
-                "n_features": self.n_features,
-            },
-            model_path,
-        )
-
-        with open(scalers_path, "wb") as f:
-            pickle.dump(self.scalers, f)
-
-        print(f"\nModel saved to: {model_path}")
-        print(f"Scalers saved to: {scalers_path}")
-
-    def load_model(self, model_path: str, scalers_path: str) -> None:
-        """Load model state and scalers."""
-        if not (os.path.exists(model_path) and os.path.exists(scalers_path)):
-            raise FileNotFoundError("Model or scalers file not found")
-
-        checkpoint = torch.load(model_path, map_location=self.device)
-        self.model.load_state_dict(checkpoint["model_state"])
-        self.optimizer.load_state_dict(checkpoint["optimizer_state"])
-        self.sequence_length = checkpoint.get("sequence_length", self.sequence_length)
-        self.n_features = checkpoint.get("n_features", self.n_features)
-
-        with open(scalers_path, "rb") as f:
-            self.scalers = pickle.load(f)
-
-        print(f"\nModel loaded from: {model_path}")
-        print(f"Scalers loaded from: {scalers_path}")
-
-    def predict(self, dataframes: Dict[str, pd.DataFrame]) -> Dict:
-        """Generate trading signals from recent data."""
-        with torch.no_grad():
-            processed_dfs = {}
-            for tf, df in dataframes.items():
-                processed_dfs[tf] = self.add_technical_features(df)
-
-            X, _ = self.prepare_data(processed_dfs, phase="test")
-            if X is None or len(X) == 0:
-                return {
-                    "action": "HOLD",
-                    "confidence": 0.0,
-                    "probabilities": {"hold": 1.0, "buy": 0.0, "sell": 0.0},
-                }
-
-            X = X.to(self.device)
-            outputs = self.model(X)
-            final_output = outputs[-1]
-            probs = torch.softmax(final_output, dim=0)
-
-            action_idx = torch.argmax(probs).item()
-            action_map = {0: "HOLD", 1: "BUY", 2: "SELL"}
-
-            return {
-                "action": action_map[action_idx],
-                "confidence": float(torch.max(probs)),
-                "probabilities": {
-                    "hold": float(probs[0]),
-                    "buy": float(probs[1]),
-                    "sell": float(probs[2]),
-                },
-            }
-
-    def backtest(
-        self,
-        dataframes: Dict[str, pd.DataFrame],
-        initial_balance: float = 10000.0,
-        position_size: float = 0.1,
-    ) -> Dict:
+    if __name__ == "__main__":
         """
-        Run backtest on test data with:
-        - BUY: Invest position_size if no position
-        - SELL: Liquidate position
-        Returns balance, return, trades, and metrics.
+        Example usage:
+        ```python
+        from ml_trader import MLTrader
+        trader = MLTrader(sequence_length=12, hidden_size=64)
+        results = await trader.train(pair="ADAUSDT", epochs=30, batch_size=32)
+        print(results)
+        ```
         """
-        with torch.no_grad():
-            processed_dfs = {}
-            for tf, df in dataframes.items():
-                processed_dfs[tf] = self.add_technical_features(df)
-
-            X, _ = self.prepare_data(processed_dfs, phase="test")
-            if X is None or len(X) == 0:
-                return {
-                    "final_balance": initial_balance,
-                    "return": 0.0,
-                    "n_trades": 0,
-                    "trades": [],
-                }
-
-            X = X.to(self.device)
-            outputs = self.model(X)
-            preds = torch.argmax(outputs, dim=1).cpu().numpy()
-
-            df_1m = processed_dfs.get("1m", pd.DataFrame())
-            if df_1m.empty:
-                return {
-                    "final_balance": initial_balance,
-                    "return": 0.0,
-                    "n_trades": 0,
-                    "trades": [],
-                }
-
-            _, _, df_test = self.split_dataframe(df_1m)
-            prices = df_test["close"].values[-len(preds):]
-
-            balance = initial_balance
-            position = 0.0
-            trades = []
-
-            for i, signal in enumerate(preds):
-                current_price = prices[i]
-
-                if signal == 1 and position <= 0:  # BUY
-                    amount_to_buy = (balance * position_size) / current_price
-                    cost = amount_to_buy * current_price
-                    balance -= cost
-                    position = amount_to_buy
-
-                    trades.append(
-                        {
-                            "type": "buy",
-                            "price": float(current_price),
-                            "amount": float(amount_to_buy),
-                            "cost": float(cost),
-                            "balance": float(balance),
-                            "timestamp": df_test.index[i].isoformat(),
-                        }
-                    )
-
-                elif signal == 2 and position > 0:  # SELL
-                    revenue = position * current_price
-                    profit_loss = revenue - trades[-1]["cost"]
-                    balance += revenue
-
-                    trades.append(
-                        {
-                            "type": "sell",
-                            "price": float(current_price),
-                            "amount": float(position),
-                            "revenue": float(revenue),
-                            "profit_loss": float(profit_loss),
-                            "balance": float(balance),
-                            "timestamp": df_test.index[i].isoformat(),
-                        }
-                    )
-                    position = 0
-
-            # Close any remaining position
-            if position > 0:
-                revenue = position * prices[-1]
-                profit_loss = revenue - trades[-1]["cost"]
-                balance += revenue
-
-                trades.append(
-                    {
-                        "type": "close",
-                        "price": float(prices[-1]),
-                        "amount": float(position),
-                        "revenue": float(revenue),
-                        "profit_loss": float(profit_loss),
-                        "balance": float(balance),
-                        "timestamp": df_test.index[-1].isoformat(),
-                    }
-                )
-
-            # Calculate metrics
-            total_return = (balance - initial_balance) / initial_balance * 100
-            n_trades = len([t for t in trades if t["type"] in ("buy", "sell")])
-
-            if n_trades > 0:
-                profits = sum([t.get("profit_loss", 0) for t in trades if t.get("profit_loss", 0) > 0])
-                losses = sum([t.get("profit_loss", 0) for t in trades if t.get("profit_loss", 0) < 0])
-                win_trades = sum(1 for t in trades if t.get('profit_loss', 0) > 0)
-
-                metrics = {
-                    'win_rate': win_trades / n_trades * 100,
-                    'profit_factor': abs(profits / losses) if losses != 0 else float('inf'),
-                    'avg_profit_per_trade': (balance - initial_balance) / n_trades
-                }
-            else:
-                metrics = {
-                    'win_rate': 0,
-                    'profit_factor': 0,
-                    'avg_profit_per_trade': 0
-                }
-
-            return {
-                'final_balance': float(balance),
-                'return': float(total_return),
-                'n_trades': n_trades,
-                'trades': trades,
-                'metrics': metrics
-            }
-
-        if __name__ == "__main__":
-            """
-            Example usage:
-            ```python
-            from asyncio import run
-            trader = MLTrader(sequence_length=14, hidden_size=64)
-            results = run(trader.train(pair="ADAUSDT", epochs=30, batch_size=64))
-            print(results)
-            ```
-            """
-            pass
+        pass

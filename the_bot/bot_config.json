@@ -1,0 +1,31 @@
+{
+  "trading_pairs": [
+    "BTC",
+    "XRP",
+    "ETH",
+    "SOL",
+    "USDC",
+    "DOGE",
+    "SUI",
+    "ADA",
+    "LTC",
+    "PEPE",
+    "XLM",
+    "LINK",
+    "ALGO",
+    "SHIB",
+    "AVAX",
+    "FTM",
+    "NEAR"
+  ],
+  "kraken_api_key": "8IVGjvpxn/VH0Ydmg4MvtxFjLfIjgTAXVQZiiLkAQ+o3O0HOsZO3gSv3",
+  "kraken_secret_key": "rdPnggjojEaClD69HpgtpI6TH/PrVSFykmHQMuMr7jXnmEWsUElqY1VFXFjdxDAy4N9Qwtc2SXG8ReertmcTUw==",
+
+  "crypto_api_key": "C4uwk3LnZ2Z5j4Zn5JQ3wh",
+  "crypto_secret_key": "cxakp_X2MY8YDiQo1pUte1sMQDMF",
+
+
+  "hyperliquid_private_key": "0x3ee67d19054bcece1f4f65be04ac3c6ac3e77187525dfb69074a551a21e58ce4",
+  "hyperliquid_api_url": "https://api.hyperliquid.xyz",
+  "hyperliquid_agent_persist": true
+}

@@ -1,4 +1,5 @@
 import argparse
+import json
 from typing import Optional
 import logging
 from . import resrch_manage
@@ -7,15 +8,46 @@ from .llm_analyzer import LLMAnalyzer
 from .live_trader import LiveTrader
 from .paper_trader import PaperTrader
 
+
+
 class CLI:
-    def __init__(self):
+    def __init__(self, config_path: Optional[str] = None):
+        """
+        Initialize CLI components with optional config path.
+
+        Args:
+            config_path (Optional[str]): Path to configuration file
+        """
         logging.info("Initializing CLI...")
+
+        # Load configuration if provided
+        self.config = self._load_config(config_path) if config_path else {}
+
         self.research_manager = resrch_manage.ResearchManager()
         logging.info("ResearchManager initialized.")
+
         self.data_processor = DataProcessor()
         self.llm_analyzer = LLMAnalyzer()
         self.automated_trader = LiveTrader()
         self.paper_trader = PaperTrader()
+
+
+    def _load_config(self, config_path: str) -> dict:
+        """
+        Load configuration from file.
+
+        Args:
+            config_path (str): Path to configuration file
+
+        Returns:
+            dict: Configuration dictionary
+        """
+        try:
+            with open(config_path, 'r') as config_file:
+                return json.load(config_file)
+        except Exception as e:
+            logging.error(f"Error loading config: {e}")
+            return {}
 
     async def run(self, option: Optional[int] = None):
         if option is None:
@@ -24,7 +56,8 @@ class CLI:
         try:
             if option == 1:
                 print("\nStarting Automated Trading...")
-                await self.automated_trader.run_trading_loop()
+                trader = LiveTrader()
+                await trader.run_trading_loop()  # Now properly awaits the coroutine
             elif option == 2:
                 await self.research_manager.run_indicator_analysis()
             elif option == 3:
@@ -57,6 +90,12 @@ class CLI:
             print(f"\nError: {e}")
 
     def _get_user_choice(self) -> int:
+        """
+        Display menu and get user selection.
+
+        Returns:
+            int: Selected menu option
+        """
         print("\nCrypto Analysis Tool")
         print("1. Start Automated Trading")
         print("2. Test Indicators")
@@ -65,12 +104,13 @@ class CLI:
         print("5. LLM Market Review")
         print("6. Start Paper Trading")
         print("7. Exit")
+        print("8. Trade Model Manager Test")
 
         while True:
             try:
-                choice = int(input("\nSelect an option (1-7): "))
-                if 1 <= choice <= 7:
+                choice = int(input("\nSelect an option (1-8): "))
+                if 1 <= choice <= 8:
                     return choice
-                print("Please enter a number between 1 and 7")
+                print("Please enter a number between 1 and 8")
             except ValueError:
                 print("Please enter a valid number")
