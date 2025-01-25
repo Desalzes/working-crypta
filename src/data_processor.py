@@ -4,11 +4,17 @@ from typing import Dict, List, Optional
 import logging
 import os
 
+import torch
+
 
 class DataProcessor:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
 
+    def prepare_model_input(self, timeframe_data: Dict[str, pd.DataFrame],
+                            scaler) -> torch.Tensor:
+        # Transform timeframe data into model input format
+        pass
     def load_market_data(self, filepath: str) -> Optional[pd.DataFrame]:
         """Load market data from CSV file"""
         try:

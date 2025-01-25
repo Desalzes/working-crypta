@@ -5,17 +5,17 @@ from typing import Dict, Optional, List
 import pandas as pd
 import asyncio
 import aiohttp
-from datetime import datetime, timedelta
+from datetime import datetime
 import hmac
 import hashlib
 import base64
 import time
 import urllib.parse
 from pathlib import Path
-from .ml_trader import MLTrader
+from src.ml_stuff.ml_trader import MLTrader
 from .market_analyzer import MarketAnalyzer
 from .data_processor import DataProcessor
-from .indicators import Indicators
+from .indicators.indicators import Indicators
 
 logger = logging.getLogger(__name__)
 

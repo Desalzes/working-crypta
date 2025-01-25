@@ -41,3 +41,35 @@ CODE MODIFICATION RULES:
    - Provide concise explanation for scores below 8
 
 Note: User's immediate request overrides these style requirements.
+
+
+C:\Users\desal\anthropicFun\research
+│   main.py
+│   config.json
+│
+├───src
+│   ├───cli.py
+│   ├───ml_stuff
+│   │   ├───ml_trader.py
+│   │   └───__init__.py
+│   └───data
+│       ├───historical
+│       │   ├───BTCUSD
+│       │   │       btc-1d-2024-07.csv
+│       │   │       btc-1d-2024-08.csv
+│       │   │       ...
+│       │   ├───ETHUSD
+│       │   │       eth-1d-2024-07.csv
+│       │   │       eth-1d-2024-08.csv
+│       │   │       ...
+│       │   └───XRPUSD
+│       │           xrp-1d-2024-07.csv
+│       │           xrp-1d-2024-08.csv
+│       │           ...
+│       └───processed
+│           └───...
+└───venv
+    ├───Scripts
+    │       activate
+    │       ...
+    └───...

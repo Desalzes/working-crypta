@@ -52,6 +52,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\data\historical\cache\ADAUSDT\ADAUSDT-1m-2024-08.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\data\historical\cache\ADAUSDT\ADAUSDT-1m-2024-09.csv">
           <value>
             <Attribute>
@@ -67,6 +74,13 @@
           </value>
         </entry>
         <entry key="\data\historical\cache\ADAUSDT\ADAUSDT-1m-2024-11.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\data\historical\cache\ADAUSDT\ADAUSDT-1m-2024-12.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
@@ -102,6 +116,20 @@
           </value>
         </entry>
         <entry key="\data\historical\cache\BNBUSDT\BNBUSDT-1m-2024-11.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\data\historical\cache\BNBUSDT\BNBUSDT-1m-2024-12.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\data\historical\cache\BTCUSDT-15m-2024-07.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
@@ -179,6 +207,34 @@
           </value>
         </entry>
         <entry key="\data\historical\cache\BTCUSDT-5m-2024-12.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\data\historical\cache\BTCUSDT\BTCUSDT-15m-2024-07.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\data\historical\cache\BTCUSDT\BTCUSDT-15m-2024-08.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\data\historical\cache\BTCUSDT\BTCUSDT-15m-2024-10.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\data\historical\cache\BTCUSDT\BTCUSDT-15m-2024-11.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
